@@ -1,0 +1,60 @@
+trigger:
+- master
+ 
+variables:
+  tag: '$(Build.BuildId)'
+ 
+pool:
+  name: default
+ 
+steps:
+ 
+# ✅ Build & Push Docker Image
+- task: Docker@2
+  displayName: Build and Push Docker Image
+  inputs:
+    containerRegistry: 'manual-aksdevopsacr-svc'
+    repository: 'custom2aksnginxapp1'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: |
+      $(tag)
+      $(Build.SourceVersion)
+ 
+# 🔍 Debug - List repo files
+- bash: |
+    echo "===== SOURCE DIRECTORY ====="
+    ls -R $(System.DefaultWorkingDirectory)
+ 
+# 🔍 Before copy
+- bash: |
+    echo "===== BEFORE COPY ====="
+    ls -R $(Build.ArtifactStagingDirectory)
+ 
+# ✅ Copy Kubernetes Manifests
+- task: CopyFiles@2
+  displayName: Copy Kubernetes Manifests
+  inputs:
+    SourceFolder: '$(System.DefaultWorkingDirectory)/kube-manifests'
+    Contents: '**/*.yml'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    OverWrite: true
+ 
+# 🔍 After copy
+- bash: |
+    echo "===== AFTER COPY ====="
+    ls -R $(Build.ArtifactStagingDirectory)
+ 
+# ✅ Publish artifacts
+- task: PublishBuildArtifacts@1
+  displayName: Publish Kubernetes Manifests
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'kube-manifests'
+    publishLocation: 'Container'
+ 
+# 🎉 Banner
+- bash: |
+    echo "🚩 BUILD SUCCESS 🚩"
+    echo "🚀 JAI GIREEESH 🚀"
+  displayName: Success Banner
